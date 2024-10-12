@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Угадай число</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-top: 50px;
+            background-color: #f0f0f0;
+            overflow: hidden; /* Скрываем скролл */
+        }
+        input, select {
+            padding: 10px;
+            font-size: 16px;
+            width: 50%;
+            margin-top: 10px;
+        }
+        button {
+            padding: 10px;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+        .message {
+            font-size: 20px;
+            margin-top: 20px;
+            color: #333;
+        }
+        .button-container {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        .hint {
+            margin-top: 10px;
+            font-style: italic;
+            color: #555;
+        }
+        .score {
+            font-size: 24px;
+            margin-top: 20px;
+            color: #007BFF;
+        }
+        .level {
+            font-size: 24px;
+            margin-top: 20px;
+            color: #FF5733;
+        }
+        .menu, .game {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="menu" id="menu">
+        <h1>Главное меню</h1>
+        <button onclick="startGameMenu()">Начать игру</button>
+        <button onclick="showRules()">Правила игры</button>
+        <button onclick="clearStorage()">Сбросить прогресс</button>
+        <button onclick="closeApp()">Закрыть приложение</button>
+    </div>
+
+    <div class="game" id="game">
+        <h1>Угадай число</h1>
+        <label for="difficulty">Выберите уровень сложности:</label>
+        <select id="difficulty">
+            <option value="50">Легкий</option>
+            <option value="100" selected>Средний</option>
+            <option value="200">Сложный</option>
+        </select>
+        <input type="number" id="guessInput" placeholder="Введите ваше число">
+        <button onclick="checkGuess()">Угадать</button>
+        <p class="message" id="message"></p>
+        <p id="attempts">Попытки: 0</p>
+        <p id="hint" class="hint"></p>
+        <p id="timer">Осталось времени: <span id="time">60</span> секунд</p>
+        <p class="score" id="score">Очки: 0</p>
+        <p class="level" id="level">Уровень: 1</p>
+        
+        <div class="button-container">
+            <button class="restart" id="restartButton" onclick="restartGame()">Начать заново</button>
+            <button onclick="showMenu()">Назад в меню</button>
+        </div>
+    </div>
+
+    <div class="rules" id="rules" style="display: none;">
+        <h1>Правила игры</h1>
+        <p>Ваша задача - угадать загаданное число в пределах выбранного диапазона.</p>
+        <p>Каждое неправильное предположение даст вам подсказку.</p>
+        <p>У вас есть 60 секунд, чтобы угадать число!</p>
+        <button onclick="hideRules()">Назад в меню</button>
+    </div>
+
+    <script>
+        let secretNumber;
+        let attempts = 0;
+        let timer;
+        let timeLeft = 60;
+        let score = 0;
+        let level = 1;
+
+        function showMenu() {
+            document.getElementById('menu').style.display = 'block';
+            document.getElementById('game').style.display = 'none';
+            document.getElementById('rules').style.display = 'none';
+        }
+
+        function startGameMenu() {
+            loadGameState();
+            document.getElementById('menu').style.display = 'none';
+            document.getElementById('game').style.display = 'block';
+            startGame();
+        }
+
+        function showRules() {
+            document.getElementById('menu').style.display = 'none';
+            document.getElementById('rules').style.display = 'block';
+        }
+
+        function hideRules() {
+            document.getElementById('rules').style.display = 'none';
+            showMenu();
+        }
+
+        function loadGameState() {
+            const savedScore = localStorage.getItem('score');
+            const savedLevel = localStorage.getItem('level');
+            if (savedScore) {
+                score = Number(savedScore);
+                document.getElementById('score').innerText = 'Очки: ' + score;
+            }
+            if (savedLevel) {
+                level = Number(savedLevel);
+                document.getElementById('level').innerText = 'Уровень: ' + level;
+            }
+        }
+
+        function clearStorage() {
+            localStorage.removeItem('score');
+            localStorage.removeItem('level');
+            score = 0;
+            level = 1;
+            alert('Прогресс сброшен.');
+            showMenu();
+        }
+
+        function closeApp() {
+            // Перенаправляем на пустую страницу, чтобы закрыть приложение
+            window.location.href = 'about:blank';
+        }
+
+        function startGame() {
+            const difficulty = Number(document.getElementById('difficulty').value);
+            secretNumber = Math.floor(Math.random() * difficulty) + 1;
+            attempts = 0;
+            timeLeft = 60; // Время установлено на 60 секунд
+            document.getElementById('guessInput').value = '';
+            document.getElementById('message').innerText = '';
+            document.getElementById('attempts').innerText = 'Попытки: 0';
+            document.getElementById('hint').innerText = '';
+            document.getElementById('time').innerText = timeLeft;
+            document.getElementById('guessInput').disabled = false;
+            document.getElementById('restartButton').style.display = 'none';
+            startTimer();
+        }
+
+        function startTimer() {
+            timer = setInterval(() => {
+                timeLeft--;
+                document.getElementById('time').innerText = timeLeft;
+                if (timeLeft <= 0) {
+                    clearInterval(timer);
+                    document.getElementById('message').innerText = "Время вышло! Игра окончена.";
+                    document.getElementById('guessInput').disabled = true;
+                    document.getElementById('restartButton').style.display = 'block';
+                }
+            }, 1000);
+        }
+
+        function checkGuess() {
+            const guess = Number(document.getElementById('guessInput').value);
+            const messageElement = document.getElementById('message');
+            attempts++;
+
+            document.getElementById('attempts').innerText = `Попытки: ${attempts}`;
+
+            if (guess < secretNumber) {
+                messageElement.innerText = "Слишком маленькое число!";
+                document.getElementById('hint').innerText = 'Подсказка: Загаданное число ' + (secretNumber % 2 === 0 ? 'четное.' : 'нечетное.');
+            } else if (guess > secretNumber) {
+                messageElement.innerText = "Слишком большое число!";
+                document.getElementById('hint').innerText = 'Подсказка: Загаданное число ' + (secretNumber % 2 === 0 ? 'четное.' : 'нечетное.');
+            } else {
+                clearInterval(timer);
+                score += Math.max(0, timeLeft * 10) + (level - 1) * 20;
+                level++;
+                messageElement.innerText = `Поздравляем! Вы угадали число ${secretNumber}! Вы заработали ${score} очков!`;
+                document.getElementById('score').innerText = 'Очки: ' + score;
+                document.getElementById('level').innerText = 'Уровень: ' + level;
+
+                localStorage.setItem('score', score);
+                localStorage.setItem('level', level);
+
+                document.getElementById('guessInput').disabled = true;
+                document.getElementById('restartButton').style.display = 'block';
+            }
+        }
+
+        function restartGame() {
+            startGame();
+        }
+
+        window.onload = function() {
+            showMenu(); // Показать главное меню при загрузке
+        };
+    </script>
+</body>
+</html>
